@@ -13,7 +13,20 @@ function createPrismaClient() {
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
-  const pool = globalForPrisma.pool ?? new Pool({ connectionString });
+  const pool =
+    globalForPrisma.pool ??
+    new Pool({
+      connectionString,
+      // Vercel serverless: keep the pool tiny
+      max: 1,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 15_000,
+      // Supabase pooler presents a cert chain Node rejects by default
+      ssl: connectionString.includes("supabase")
+        ? { rejectUnauthorized: false }
+        : undefined,
+    });
+
   if (!globalForPrisma.pool) globalForPrisma.pool = pool;
 
   const adapter = new PrismaPg(pool);
